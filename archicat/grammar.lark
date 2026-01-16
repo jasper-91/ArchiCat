@@ -1,0 +1,84 @@
+start: (expand _NL+)? ((stage_declaration _NL)* stage_declaration _NL*)?
+
+?declaration: variable
+    | list
+    | costume
+    | sound
+    | procedure
+    | warp_procedure
+    | event
+    | config
+
+?stage_declaration: declaration
+    | sprite
+    | message
+
+sprite: "sprite" NAME "{" ((declaration _NL+)* declaration _NL*)? "}"
+
+expand: "expand" PATH
+
+variable: "var" NAME ["=" value]
+
+list: "list" NAME ("=" "[" ((value ",")* value)? "]")?
+
+message: "message" NAME
+
+costume: "costume" NAME "=" PATH
+
+sound: "sound" NAME "=" PATH
+
+config_option: NAME "=" config_value
+
+config: "default" (config_option | "{" ((config_option _NL+)* config_option _NL*)? "}")
+
+?argument: NAME "?" -> bool_argument
+    | NAME -> string_argument
+
+procedure: "proc" NAME ("(" ((argument ",") argument)? ")")? position chain
+
+warp_procedure: "proc"? "warp" NAME ("(" ((argument ",") argument)? ")")? position chain
+
+event: "on"? hat_block position chain
+
+position: ("[" INT "," INT "]")?
+
+?expression: reporter_block 
+    | value 
+    | identifier
+    | option 
+    | chain
+
+chain: "{" _NL? ((statement_block _NL)* statement_block)? "}"
+
+reporter_block: NAME "(" ((expression ",")* expression)? ")"
+
+statement_block: NAME "(" ((expression ",")* expression)? ")"
+
+hat_block: NAME ( "(" ((expression ",")* expression)? ")" )?
+
+identifier: NAME
+
+option: "$" NAME
+
+?value: INT -> int
+    | FLOAT -> float
+    | STRING -> string
+    | /#[0-9a-f]{6}/ -> color
+
+?config_value: value
+    | "true" -> true
+    | "false" -> false
+
+PATH: STRING
+
+_NL: NEWLINE
+
+%import common.SIGNED_INT -> INT
+%import common.SIGNED_FLOAT -> FLOAT
+%import common.ESCAPED_STRING -> STRING
+%import common.NEWLINE
+%import common.CNAME -> NAME
+%import common.WS -> WS
+
+%ignore WS
+%ignore NEWLINE

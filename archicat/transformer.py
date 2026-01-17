@@ -1,5 +1,5 @@
 from archicat import components
-from .block import Block,bool_input,string_input
+from .block import Block,MonitorableBlock,bool_input,string_input
 from .blocks import (sprite_hat_blocks,
                      sprite_reporter_blocks,
                      sprite_statement_blocks,
@@ -178,6 +178,20 @@ class ScratchFileBuilder(Interpreter):
     def config(self,*options):
         for option in options:
             self.visit(option)
+
+    def monitor_option(self,name,value):
+        return name,self.visit(value)
+    
+    def monitor(self,name,arg,*options):
+        block = (stage_reporter_blocks if self.current_target.isStage 
+                                      else sprite_reporter_blocks)[name]
+        if isinstance(block,MonitorableBlock):
+            if arg is None:
+                self.project.monitors.append(block.monitor(self,**dict(map(self.visit,options))))
+            else:
+                self.project.monitors.append(block.monitor(self,self.visit(arg),**dict(map(self.visit,options))))
+        else:
+            print('cannot monitor block')
 
     def variable(self,name,value=None):
         print('variable',name,value)

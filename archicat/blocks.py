@@ -357,6 +357,48 @@ class Of(Block):
                                                 self._sub_block(builder,object))},
                                                 fields = {'PROPERTY': member_field(member)})
         return builder._register_block(block,id=id)
+    
+
+class Current(MonitorableBlock):
+    def monitor(self,builder: ScratchFileBuilder,*args: InputItem,
+                x: int = 0,y: int = 0,visible: bool = True,):
+        block = super().monitor(builder,*args,x=x,y=y,visible=visible)
+        block.id = 'current_' + block.params['CURRENTMENU'].lower()
+        return block
+    
+
+class Variable(MonitorableBlock):
+    sprite_specific = False
+
+    def monitor(self,builder: ScratchFileBuilder,*args: InputItem,
+                x: int = 0,y: int = 0,visible: bool = True,mode: str = 'default',
+                sliderMin: int = 0,sliderMax: int = 100,isDiscrete: bool = True) -> components.Monitor:
+        monitor = super().monitor(builder,*args,x,y,visible)
+        monitor.id = builder._get_variable(monitor.params['VARIABLE'])
+        if any(variable.name == monitor.params['VARIABLE'] for variable in builder.current_target.variables.values()):
+            monitor.spriteName = builder.current_target.name
+        monitor.mode = mode
+        monitor.sliderMin = sliderMin
+        monitor.sliderMax = sliderMax
+        monitor.isDiscrete = isDiscrete
+        return monitor
+
+
+class List(MonitorableBlock):
+    sprite_specific = False
+
+    def monitor(self,builder: ScratchFileBuilder,*args: InputItem,
+                x: int = 0,y: int = 0,visible: bool = True,width: int = 100,height = 100) -> components.Monitor:
+        monitor = components.ListMonitor(**vars(super().monitor(builder,*args,x,y,visible)))
+        monitor.id = builder._get_list(monitor.params['LIST'])
+        if any(list.name == monitor.params['LIST'] for list in builder.current_target.lists.values()):
+            monitor.spriteName = builder.current_target.name
+        monitor.value = []
+        monitor.opcode = 'data_listcontents'
+        monitor.mode = 'list'
+        monitor.width = width
+        monitor.height = height
+        return monitor
 
 
 statement_blocks = {
@@ -371,7 +413,7 @@ statement_blocks = {
     'ClearSoundEffects': Block('sound_cleareffects'),
     'ChangeVolumeBy': Block('sound_changevolumeby',VOLUME=float_input),
     'SetVolumeTo': Block('sound_setvolumeto',VOLUME=float_input),
-    'Volume': Block('sound_volume'),
+    'Volume': MonitorableBlock('sound_volume'),
     # Control
     'Wait': Block('control_wait',DURATION=unsigned_float_input),
     'Repeat': Block('control_repeat',TIMES=unsigned_int_input,SUBSTACK=chain_input),
@@ -409,17 +451,17 @@ reporter_blocks = {
     'TouchingColor': Block('sensing_touchingcolor',COLOR=color_input),
     'ColorIsTouchingColor': Block('sensing_coloristouchingcolor',COLOR=color_input,COLOR2=color_input),
     'AskAndWait': Block('sensing_askandwait',QUESTION=string_input),
-    'Answer': Block('sensing_answer'),
+    'Answer': MonitorableBlock('sensing_answer',sprite_specific=False),
     'KeyPressed': KeyPressed(),
     'MouseDown': Block('sensing_mousedown'),
     'MouseX': Block('sensing_mousex'),
     'MouseY': Block('sensing_mousey'),
-    'Loudness': Block('sensing_loudness'),
-    'Timer': Block('sensing_timer'),
+    'Loudness': MonitorableBlock('sensing_loudness',sprite_specific=False),
+    'Timer': MonitorableBlock('sensing_timer',sprite_specific=False),
     'Of': Of().attach_option(OfOptions),
-    'Current': Block('sensing_current',CURRENTMENU=option_field(CurrentOptions)).attach_option(CurrentOptions),
+    'Current': Current('sensing_current',CURRENTMENU=option_field(CurrentOptions)).attach_option(CurrentOptions),
     'DaysSince2000': Block('sensing_dayssince2000'),
-    'Username': Block('sensing_username'),
+    'Username': MonitorableBlock('sensing_username',sprite_specific=False),
     # Operator
     'Add': _operation('operator_add'),
     'Subtract': _operation('operator_subtract'),
@@ -439,8 +481,8 @@ reporter_blocks = {
     'Round': Block('operator_round',NUM=float_input),
     'MathOp': Block('operator_mathop',OPERATION=option_field(MathOpOptions),NUM=float_input).attach_option(MathOpOptions),
     # Data
-    'Variable': Block('data_variable',VARIABLE=variable_field),
-    'List': Block('data_list',LIST=list_field),
+    'Variable': Variable('data_variable',VARIABLE=variable_field),
+    'List': List('data_list',LIST=list_field),
     'ItemOfList': Block('data_itemoflist',LIST=list_field,INDEX=unsigned_int_input),
     'ItemNumOfList': Block('data_itemnumoflist',LIST=list_field,ITEM=string_input),
     'LengthOfList': Block('data_lengthoflist',LIST=list_field),
@@ -461,7 +503,7 @@ hat_blocks = {
     
 }
 
-sprite_statement_blocks = {
+sprite_statement_blocks: dict[str,Block] = {
     **statement_blocks,
     # Motion
     'MoveSteps': Block('motion_movesteps',STEPS=float_input),
@@ -499,12 +541,12 @@ sprite_statement_blocks = {
         .attach_option(GoForwardBackwardLayersOptions)
 }
 
-sprite_reporter_blocks = {
+sprite_reporter_blocks: dict[str,Block] = {
     **reporter_blocks,
     # Motion
-    'XPosition': Block('motion_xposition'),
-    'YPosition': Block('motion_yposition'),
-    'Direction': Block('motion_direction'),
+    'XPosition': MonitorableBlock('motion_xposition',sprite_specific=True),
+    'YPosition': MonitorableBlock('motion_yposition',sprite_specific=True),
+    'Direction': MonitorableBlock('motion_direction',sprite_specific=True),
     # Looks
     'CostumeNumberName': Block('looks_costumenumbername',NUMBER_NAME=option_field(NumberNameOptions)).attach_option(NumberNameOptions),
     'Size': Block('looks_size'),
@@ -512,23 +554,23 @@ sprite_reporter_blocks = {
     'DistanceTo': Block('sensing_distanceto',)
 }
 
-sprite_hat_blocks = {
+sprite_hat_blocks: dict[str,Block] = {
     **hat_blocks,
     # Event
     'WhenThisSpriteClicked': Block('event_whenthisspriteclicked'),
 }
 
-stage_statement_blocks = {
+stage_statement_blocks: dict[str,Block] = {
     **statement_blocks,
     # Looks
     'SwitchBackdropToAndWait': SwitchBackdropToAndWait().attach_option(SwitchBackdropToOptions),
 }
 
-stage_reporter_blocks = {
+stage_reporter_blocks: dict[str,Block] = {
     **reporter_blocks,
 }
 
-stage_hat_blocks = {
+stage_hat_blocks: dict[str,Block] = {
     **hat_blocks,
     # Event
     'WhenStageClicked': Block('event_whenstageclicked'),

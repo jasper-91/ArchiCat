@@ -130,8 +130,8 @@ class Block:
     def attach_option(self,options: EnumType) -> Self:
         self.attached_options = options
         return self
-
-    def __call__(self,builder: ScratchFileBuilder,*args: InputItem,id: Optional[components.Id] = None) -> components.Block:
+    
+    def apply_args(self,builder: ScratchFileBuilder,*args: InputItem) -> components.Block:
         inputs = {}
         fields = {}
         for arg,(name,func) in zip(args,self.args):
@@ -144,4 +144,29 @@ class Block:
             block = components.Block(self.opcode,inputs=inputs,fields=fields)
         else:
             block = components.MutationBlock(self.opcode,inputs=inputs,fields=fields,mutation=self.mutation)
-        return builder._register_block(block,id)
+        return block
+
+    def __call__(self,builder: ScratchFileBuilder,*args: InputItem,id: Optional[components.Id] = None) -> components.Id:        
+        return builder._register_block(self.apply_args(builder,*args),id)
+    
+
+class MonitorableBlock(Block):
+    sprite_specific: bool
+
+    def __init__(self,opcode: str,sprite_specific: bool = False,**kwargs: FieldOrInput):
+        super().__init__(opcode,**kwargs)
+        self.sprite_specific = sprite_specific
+
+    def monitor(self,builder: ScratchFileBuilder,*args: InputItem,
+                x: int = 0,y: int = 0,visible: bool = True) -> components.Monitor:
+        block = self.apply_args(builder,*args)
+        return components.Monitor(
+            id=self.opcode.split('_',1)[1],
+            opcode=self.opcode,
+            params={k: f.value for k,f in block.fields.items()},
+            mode='default',
+            spriteName=None if builder.current_target.isStage or not self.sprite_specific else builder.current_target.name,
+            x=x,
+            y=y,
+            visible=visible
+        )

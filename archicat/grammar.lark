@@ -8,6 +8,7 @@ start: (expand _NL+)? ((stage_declaration _NL)* stage_declaration _NL*)?
     | warp_procedure
     | event
     | config
+    | monitor
 
 ?stage_declaration: declaration
     | sprite
@@ -30,6 +31,10 @@ sound: "sound" NAME "=" PATH
 config_option: NAME "=" config_value
 
 config: "default" (config_option | "{" ((config_option _NL+)* config_option _NL*)? "}")
+
+?monitor: "monitor" NAME "(" [option | identifier] ")" "{" ((monitor_option _NL+)* monitor_option _NL*)? "}"
+
+monitor_option: NAME "=" config_value
 
 ?argument: NAME "?" -> bool_argument
     | NAME -> string_argument

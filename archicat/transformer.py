@@ -95,10 +95,22 @@ class ScratchFileBuilder(Interpreter):
         self.current_target.blocks[id or (id := random_id())] = block
         return id
     
-    def _transform_block(self,name: str,available_blocks: dict[str,Block],*args: Tree) -> components.Id:
-        self.parent_block_stack.append(random_id(available_blocks[name].opcode))
+    def _statement_blocks(self) -> dict[str,Block]:
+        return (stage_statement_blocks if self.current_target.isStage else sprite_statement_blocks) | self.procedure_scope_stack[-1]
+    
+    def _reporter_blocks(self) -> dict[str,Block]:
+        return stage_reporter_blocks if self.current_target.isStage else sprite_reporter_blocks
+    
+    def _hat_blocks(self) -> dict[str,Block]:
+        return stage_hat_blocks if self.current_target.isStage else sprite_hat_blocks
+    
+    def _transform_block(self,name: str,available_blocks: dict[str,Block],comment: Tree | None,*args: Tree) -> components.Id:
+        self.parent_block_stack.append(block_id := random_id(available_blocks[name].opcode))
         self.available_options_stack.append(available_blocks[name].attached_options)
-        available_blocks[name](self,*list(map(self.visit,args)),id = self.parent_block_stack[-1])
+        available_blocks[name](self,*list(map(self.visit,args)),id = block_id)
+        if comment is not None:
+            self.current_target.comments[comment_id := self.visit(comment)].blockId = block_id
+            self.current_target.blocks[block_id] = components.CommentedBlock(**vars(self._block_by_id(block_id)),comment=comment_id)
         return self.parent_block_stack.pop()
     
     def _create_procedure(self,procname: str,chain: Tree,position: Tree,*arguments: Tree,warp: bool):
@@ -183,18 +195,17 @@ class ScratchFileBuilder(Interpreter):
         return name,self.visit(value)
     
     def monitor(self,name,arg,*options):
-        block = (stage_reporter_blocks if self.current_target.isStage 
-                                      else sprite_reporter_blocks)[name]
-        if isinstance(block,MonitorableBlock):
-            if arg is None:
-                self.project.monitors.append(block.monitor(self,**dict(map(self.visit,options))))
-            else:
-                self.project.monitors.append(block.monitor(self,self.visit(arg),**dict(map(self.visit,options))))
+        block = self._reporter_blocks()[name]
+        if arg is None:
+            self.project.monitors.append(block.monitor(self,**dict(map(self.visit,options))))
         else:
-            print('cannot monitor block')
+            self.project.monitors.append(block.monitor(self,self.visit(arg),**dict(map(self.visit,options))))
+
+    def comment(self,content: str,*options: Tree) -> components.Id:
+        self.current_target.comments[id := random_id()] = components.Comment(text=content[1:-1],**dict(map(self.visit,options)))
+        return id
 
     def variable(self,name,value=None):
-        print('variable',name,value)
         self.current_target.variables[random_id()] = \
             components.Variable(name.value,self.visit(value) if value is not None else '')
 
@@ -240,7 +251,7 @@ class ScratchFileBuilder(Interpreter):
 
     def option(self,name):
         return self.available_options_stack[-1]._member_map_[name]
-    
+        
     def identifier(self,name): return name
 
     def event(self,hat,position,chain):
@@ -283,16 +294,16 @@ class ScratchFileBuilder(Interpreter):
             return blocks[0]
 
     def statement_block(self,name,*args):
-        return self._transform_block(name,(stage_statement_blocks if self.current_target.isStage 
-                                     else sprite_statement_blocks) | self.procedure_scope_stack[-1],*args)
+        *args,comment = args
+        return self._transform_block(name,self._statement_blocks(),comment,*args)
     
     def reporter_block(self,name,*args):
-        return self._transform_block(name,stage_reporter_blocks if self.current_target.isStage 
-                                     else sprite_reporter_blocks,*args)
+        *args,comment = args
+        return self._transform_block(name,self._reporter_blocks(),comment,*args)
     
     def hat_block(self,name,*args):
-        return self._transform_block(name,stage_hat_blocks if self.current_target.isStage 
-                                     else sprite_hat_blocks,*args)
+        *args,comment = args
+        return self._transform_block(name,self._hat_blocks(),comment,*args)
 
     def int(self,value):
         return int(value)

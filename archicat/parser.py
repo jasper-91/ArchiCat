@@ -1,6 +1,7 @@
-from .transformer import ScratchFileBuilder
+from .error import ArchiCatSyntaxError
 
 from lark import Lark,Tree
+from lark.exceptions import UnexpectedEOF,UnexpectedCharacters,UnexpectedToken
 from pathlib import Path
 
 
@@ -8,7 +9,14 @@ with open(Path(__file__).parent / 'grammar.lark') as file:
     parser = Lark(file.read())
 
 def parse(text: str) -> Tree:
-    return parser.parse(text)
+    try:
+        return parser.parse(text)
+    except UnexpectedToken as exception:
+        raise ArchiCatSyntaxError(exception.line,exception.column,f'Unexpected token {exception.token}')
+    except UnexpectedCharacters as exception:
+        raise ArchiCatSyntaxError(exception.line,exception.column,f'Unexpected character {exception.char}')
+    except UnexpectedEOF as exception:
+        raise ArchiCatSyntaxError(exception.line,exception.column,'Unexpected EOF')
 
 def parse_file(path: Path | str) -> Tree:
     with open(str(path)) as file:

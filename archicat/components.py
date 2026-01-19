@@ -105,14 +105,13 @@ class Monitor(ListMonitor):
     
 @dataclass
 class Comment:
-    blockId: Id
     text: str
+    blockId: Optional[Id] = None
     minimized: bool = False
     x: int = 0
     y: int = 0
     width: int = 100
     height: int = 100
-    
     
 @dataclass
 class Meta:
@@ -129,6 +128,10 @@ class Block:
     parent: Optional[Id] = None
     shadow: bool = False 
     topLevel: bool = False
+
+@dataclass
+class CommentedBlock(Block):
+    comment: Id = Id()
 
 @dataclass
 class HatBlock(Block):

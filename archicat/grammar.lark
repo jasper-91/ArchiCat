@@ -9,6 +9,7 @@ start: (expand _NL+)? ((stage_declaration _NL)* stage_declaration _NL*)?
     | event
     | config
     | monitor
+    | comment
 
 ?stage_declaration: declaration
     | sprite
@@ -47,6 +48,8 @@ event: "on"? hat_block position chain
 
 position: ("[" INT "," INT "]")?
 
+comment: ":" STRING ("{" ((config_option _NL)* config_option)? "}")?
+
 ?expression: reporter_block 
     | value 
     | identifier
@@ -55,11 +58,11 @@ position: ("[" INT "," INT "]")?
 
 chain: "{" _NL? ((statement_block _NL)* statement_block)? "}"
 
-reporter_block: NAME "(" ((expression ",")* expression)? ")"
+reporter_block: NAME "(" ((expression ",")* expression)? ")" [comment]
 
-statement_block: NAME "(" ((expression ",")* expression)? ")"
+statement_block: NAME "(" ((expression ",")* expression)? ")" [comment]
 
-hat_block: NAME ( "(" ((expression ",")* expression)? ")" )?
+hat_block: NAME ( "(" ((expression ",")* expression)? ")" )? [comment]
 
 identifier: NAME
 

@@ -1,5 +1,5 @@
 from archicat import components
-from .block import Block,MonitorableBlock,bool_input,string_input
+from .block import Block,bool_input,string_input
 from .blocks import (sprite_hat_blocks,
                      sprite_reporter_blocks,
                      sprite_statement_blocks,
@@ -17,6 +17,7 @@ from enum import Enum
 from json import dumps as dump_json,loads as load_json
 from hashlib import md5
 from wave import open as open_wav
+from mutagen.mp3 import MP3
 from enum import Enum,auto
 
 
@@ -64,7 +65,7 @@ class ScratchFileBuilder(Interpreter):
             callback()
         with ZipFile(str(path),'w') as zipfile:
             zipfile.writestr('project.json',data := dump_json(components.to_json(self.project),indent=4))
-            print(data)
+            # print(data)
             for name,path in self.assets:
                 zipfile.writestr(name,path.read_bytes())
             if self.expands_file is not None:
@@ -105,7 +106,7 @@ class ScratchFileBuilder(Interpreter):
         return stage_hat_blocks if self.current_target.isStage else sprite_hat_blocks
     
     def _transform_block(self,name: str,available_blocks: dict[str,Block],comment: Tree | None,*args: Tree) -> components.Id:
-        self.parent_block_stack.append(block_id := random_id(available_blocks[name].opcode))
+        self.parent_block_stack.append(block_id := random_id())
         self.available_options_stack.append(available_blocks[name].attached_options)
         available_blocks[name](self,*list(map(self.visit,args)),id = block_id)
         if comment is not None:
@@ -239,6 +240,11 @@ class ScratchFileBuilder(Interpreter):
             with open_wav(str(path)) as wav:
                 rate = wav.getframerate()
                 sample_count = wav.getnframes()
+        elif path.suffix.lstrip('.').lower() == 'mp3':
+            audio = MP3(path)
+            rate = audio.info.sample_rate
+            sample_count = int(round(rate * audio.info.length))
+            
         self.current_target.sounds.append(components.Sound(
             assetId=hash,
             name=name,

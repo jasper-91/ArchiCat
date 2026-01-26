@@ -33,7 +33,7 @@ config_option: NAME "=" config_value
 
 config: "default" (config_option | "{" ((config_option _NL+)* config_option _NL*)? "}")
 
-?monitor: "monitor" NAME "(" [option | identifier] ")" "{" ((monitor_option _NL+)* monitor_option _NL*)? "}"
+?monitor: "monitor" NAME ["(" [option | identifier] ")"] "{" ((monitor_option _NL+)* monitor_option _NL*)? "}"
 
 monitor_option: NAME "=" config_value
 

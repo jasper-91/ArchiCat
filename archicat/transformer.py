@@ -1,11 +1,6 @@
 from archicat import components
 from .block import Block,bool_input,string_input
-from .blocks import (sprite_hat_blocks,
-                     sprite_reporter_blocks,
-                     sprite_statement_blocks,
-                     stage_hat_blocks,
-                     stage_reporter_blocks,
-                     stage_statement_blocks)
+from .extension import ExtensionManager,Extension
 
 from lark import Tree
 from lark.visitors import Interpreter,v_args
@@ -41,27 +36,28 @@ class ScratchFileBuilder(Interpreter):
     project: components.Project
     stage: components.Stage
     current_target: components.Target
+    block_stack: list[ExtensionManager]
     expands_file: Optional[Path] = None
     parent_block_stack: list[components.Id]
     identifier_type_stack: list[IdentifierType]
-    procedure_scope_stack: list[dict[str,Block]]
     available_options_stack: list[Type[Enum]]
-    secondary_callbacks: list[tuple[Callable,components.Target,list[dict[str,Block]]]]
+    secondary_callbacks: list[tuple[Callable,components.Target,Extension]]
 
     def __init__(self):
         self.assets = []
         self.stage = components.Stage('Stage',True)
         self.current_target = self.stage
+        self.block_stack = [ExtensionManager(self)]
+        self.block_stack[-1].add_extension(Extension('custom'))
         self.parent_block_stack = [None]
         self.identifier_type_stack = []
         self.available_options_stack = []
-        self.procedure_scope_stack = [{}]
         self.secondary_callbacks = []
         self.expands_file = None
         self.project = components.Project(targets=[self.stage])
 
     def save(self,path: Path | str):
-        for callback,self.current_target,self.procedure_scope_stack in self.secondary_callbacks:
+        for callback,self.current_target,self.block_stack in self.secondary_callbacks:
             callback()
         with ZipFile(str(path),'w') as zipfile:
             zipfile.writestr('project.json',data := dump_json(components.to_json(self.project),indent=4))
@@ -75,7 +71,7 @@ class ScratchFileBuilder(Interpreter):
                             zipfile.writestr(asset,srcfile.read(asset))
 
     def _secondary_decorator(self,callback: Callable):
-        self.secondary_callbacks.append((callback,self.current_target,self.procedure_scope_stack.copy()))
+        self.secondary_callbacks.append((callback,self.current_target,self.block_stack.copy()))
 
     def _get_variable(self,name: str) -> components.Id:
         return next(id for id,variable in (*self.current_target.variables.items(),
@@ -96,19 +92,23 @@ class ScratchFileBuilder(Interpreter):
         self.current_target.blocks[id or (id := random_id())] = block
         return id
     
-    def _statement_blocks(self) -> dict[str,Block]:
-        return (stage_statement_blocks if self.current_target.isStage else sprite_statement_blocks) | self.procedure_scope_stack[-1]
+    # def _statement_blocks(self) -> dict[str,Block]:
+    #     return (stage_statement_blocks if self.current_target.isStage else sprite_statement_blocks) | self.procedure_scope_stack[-1]
     
-    def _reporter_blocks(self) -> dict[str,Block]:
-        return stage_reporter_blocks if self.current_target.isStage else sprite_reporter_blocks
+    # def _reporter_blocks(self) -> dict[str,Block]:
+    #     return stage_reporter_blocks if self.current_target.isStage else sprite_reporter_blocks
     
-    def _hat_blocks(self) -> dict[str,Block]:
-        return stage_hat_blocks if self.current_target.isStage else sprite_hat_blocks
+    # def _hat_blocks(self) -> dict[str,Block]:
+    #     return stage_hat_blocks if self.current_target.isStage else sprite_hat_blocks
     
-    def _transform_block(self,name: str,available_blocks: dict[str,Block],comment: Tree | None,*args: Tree) -> components.Id:
+    def _transform_block(self,block: Block,comment: Tree | None,*args: Tree) -> components.Id:
         self.parent_block_stack.append(block_id := random_id())
-        self.available_options_stack.append(available_blocks[name].attached_options)
-        available_blocks[name](self,*list(map(self.visit,args)),id = block_id)
+        processed_args = []
+        for arg,arg_option in zip(args,block.attached_options):
+            self.available_options_stack.append(arg_option)
+            processed_args.append(self.visit(arg))
+            self.available_options_stack.pop()
+        block(self,*processed_args,id=block_id)
         if comment is not None:
             self.current_target.comments[comment_id := self.visit(comment)].blockId = block_id
             self.current_target.blocks[block_id] = components.CommentedBlock(**vars(self._block_by_id(block_id)),comment=comment_id)
@@ -147,12 +147,13 @@ class ScratchFileBuilder(Interpreter):
                 warp=components.Warp.TRUE if warp else components.Warp.FALSE
             )),id=prototype_id)
         
-        self.procedure_scope_stack[-1][procname] = Block('procedures_call',components.Procedure(
+        self.block_stack[-1].get_extension('custom').create_statement(procname,
+            Block('procedures_call',components.Procedure(
                 proccode=proccode,
                 argumentids=dump_json(argument_ids),
                 warp=components.Warp.TRUE if warp else components.Warp.FALSE
             ),**{argument_id: (bool_input if argument_type == ArgumentType.BOOL else string_input) 
-                            for argument_id,argument_type in zip(argument_ids,argument_types)})
+                            for argument_id,argument_type in zip(argument_ids,argument_types)}))
         
         @self._secondary_decorator
         def secondary():
@@ -167,7 +168,7 @@ class ScratchFileBuilder(Interpreter):
         return self.project
 
     def sprite(self,name,*declarations):
-        self.procedure_scope_stack.append({})
+        self.block_stack.append(self.block_stack[-1].update('custom',Extension('custom')))
         if targets := list(target for target in self.project.targets if target.name == name):
             self.current_target = targets[0]
         else:
@@ -176,7 +177,7 @@ class ScratchFileBuilder(Interpreter):
         for declaration in declarations:
             self.visit(declaration)
         self.current_target = self.stage
-        self.procedure_scope_stack.pop()
+        self.block_stack.pop()
 
     def expand(self,file):
         self.expands_file = Path(file[1:-1])
@@ -196,11 +197,13 @@ class ScratchFileBuilder(Interpreter):
         return name,self.visit(value)
     
     def monitor(self,name,arg,*options):
-        block = self._reporter_blocks()[name]
+        monitor = self.block_stack[-1].get_monitor(name)
+        self.available_options_stack.append(monitor.attached_options)
         if arg is None:
-            self.project.monitors.append(block.monitor(self,**dict(map(self.visit,options))))
+            self.project.monitors.append(monitor(self,**dict(map(self.visit,options))))
         else:
-            self.project.monitors.append(block.monitor(self,self.visit(arg),**dict(map(self.visit,options))))
+            self.project.monitors.append(monitor(self,self.visit(arg),**dict(map(self.visit,options))))
+        self.available_options_stack.pop(0)
 
     def comment(self,content: str,*options: Tree) -> components.Id:
         self.current_target.comments[id := random_id()] = components.Comment(text=content[1:-1],**dict(map(self.visit,options)))
@@ -256,7 +259,9 @@ class ScratchFileBuilder(Interpreter):
         self.assets.append((hash + '.' + suffix,path))
 
     def option(self,name):
-        return self.available_options_stack[-1]._member_map_[name]
+        if self.available_options_stack[-1] is not None:
+            return self.available_options_stack[-1]._member_map_[name]
+        raise NameError(f'Option {name} not found')
         
     def identifier(self,name): return name
 
@@ -301,15 +306,15 @@ class ScratchFileBuilder(Interpreter):
 
     def statement_block(self,name,*args):
         *args,comment = args
-        return self._transform_block(name,self._statement_blocks(),comment,*args)
+        return self._transform_block(self.block_stack[-1].get_statement(name),comment,*args)
     
     def reporter_block(self,name,*args):
         *args,comment = args
-        return self._transform_block(name,self._reporter_blocks(),comment,*args)
+        return self._transform_block(self.block_stack[-1].get_reporter(name),comment,*args)
     
     def hat_block(self,name,*args):
         *args,comment = args
-        return self._transform_block(name,self._hat_blocks(),comment,*args)
+        return self._transform_block(self.block_stack[-1].get_hat(name),comment,*args)
 
     def int(self,value):
         return int(value)

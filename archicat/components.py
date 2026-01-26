@@ -87,7 +87,7 @@ class List(NamedTuple):
 class ListMonitor:
     id: Id
     opcode: str
-    params: dict[str,Any]
+    params: dict[str,Any] = field(default_factory=dict)
     mode: str = 'default'
     spriteName: Optional[str] = None
     value: Any = None

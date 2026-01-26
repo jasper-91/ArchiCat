@@ -6,6 +6,10 @@ from typing import Optional,TYPE_CHECKING,Any,Callable,Type,Self
 if TYPE_CHECKING:
     from .transformer import ScratchFileBuilder
 
+class BlockAccessModifier(Enum):
+    ALL = 'all'
+    STAGE = 'stage'
+    SPRITE = 'sprite'
 
 def _enum_has_value(enum: EnumType,value: Any) -> bool:
     return value in set(item.value for item in enum)
@@ -92,16 +96,30 @@ def string_input(builder: ScratchFileBuilder,value: str | components.Id) -> comp
 def chain_input(builder: ScratchFileBuilder,value: components.Id) -> components.Input:
     return input(builder,components.InputType.NO_SHADOW,value)
 
-def option_input(shadow: Enum,options: Optional[Type[EnumType]] = None,allow_other: bool = False,
-                 modifier: Callable[[ScratchFileBuilder,InputItem],InputItem] = lambda value: value) -> FieldOrInput:
+def costume_input(builder: ScratchFileBuilder,value: components.Id | str) -> components.Input:
+    input_block = Block('looks_costume',COSTUME=field)
+    if isinstance(value,components.Id):
+        return input(builder,components.InputType.OBSCURED_SHADOW,value,
+                     input_block(builder,builder.current_target.costumes[0].name))
+    else:
+        return input(builder,components.InputType.SHADOW,input_block(builder,value))
+    
+def sound_input(builder: ScratchFileBuilder,value: components.Id | str) -> components.Input:
+    input_block = Block('sound_sounds_menu',SOUNDS_MENU=field)
+    if isinstance(value,components.Id):
+        return input(builder,components.InputType.OBSCURED_SHADOW,value,
+                     input_block(builder,builder.current_target.sounds[0].name))
+    else:
+        return input(builder,components.InputType.SHADOW,input_block(builder,value))
+
+def option_input(options: Type[EnumType],shadow: str | Enum,input_block: Block) -> FieldOrInput:
     def _option_input(builder: ScratchFileBuilder,value: components.Id | str | Enum) -> components.Input:
-        modvalue = modifier(builder,value)
-        if isinstance(modvalue,components.Id):
-            return input(builder,components.InputType.OBSCURED_SHADOW,modvalue,modifier(shadow))
-        elif isinstance(modvalue,options):
-            return input(builder,components.InputType.SHADOW,modvalue.value)
-        elif isinstance(modvalue,str) and (allow_other or options is None or _enum_has_value(options,value)):
-            return input(builder,components.InputType.SHADOW,modvalue)
+        if isinstance(value,components.Id):
+            return input(builder,components.InputType.OBSCURED_SHADOW,value,input_block(builder,shadow))
+        elif isinstance(value,(options,value)):
+            return input(builder,components.InputType.SHADOW,input_block(value.value))
+        else:
+            return input(builder,components.InputType.SHADOW,input_block(value))
     return _option_input
 
 def message_input(builder: ScratchFileBuilder,message: components.Id | str) -> components.Input:
@@ -125,10 +143,12 @@ class Block:
         self.opcode = opcode
         self.mutation = mutation
         self.args = kwargs.items()
-        self.attached_options = []
+        self.attached_options = [None] * len(self.args)
 
-    def attach_option(self,options: EnumType) -> Self:
-        self.attached_options = options
+    def attach_options(self,*args: EnumType,**kwargs: EnumType) -> Self:
+        self.attached_options[:len(args)] = args
+        for name,options in kwargs.items():
+            self.attached_options[list(map(lambda arg: arg[0],self.args)).index(name)] = options
         return self
     
     def apply_args(self,builder: ScratchFileBuilder,*args: InputItem) -> components.Block:
@@ -148,25 +168,33 @@ class Block:
 
     def __call__(self,builder: ScratchFileBuilder,*args: InputItem,id: Optional[components.Id] = None) -> components.Id:        
         return builder._register_block(self.apply_args(builder,*args),id)
-    
 
-class MonitorableBlock(Block):
-    sprite_specific: bool
 
-    def __init__(self,opcode: str,sprite_specific: bool = False,**kwargs: FieldOrInput):
-        super().__init__(opcode,**kwargs)
-        self.sprite_specific = sprite_specific
+class Monitor:
+    opcode: str
+    attached_options: Optional[EnumType]
 
-    def monitor(self,builder: ScratchFileBuilder,*args: InputItem,
-                x: int = 0,y: int = 0,visible: bool = True) -> components.Monitor:
-        block = self.apply_args(builder,*args)
-        return components.Monitor(
-            id=self.opcode.split('_',1)[1],
-            opcode=self.opcode,
-            params={k: f.value for k,f in block.fields.items()},
-            mode='default',
-            spriteName=None if builder.current_target.isStage or not self.sprite_specific else builder.current_target.name,
+    def __init__(self,opcode: str):
+        self.opcode = opcode
+        self.attached_options = None
+
+    def attach_options(self,options: EnumType) -> Self:
+        self.attached_options = options
+        return self
+
+    def __call__(self,builder: ScratchFileBuilder,x: int = 0,y: int = 0,visible: bool = True) -> components.Monitor:
+        return components.ListMonitor(
+            self.opcode.split('_',1)[-1],
+            self.opcode,
             x=x,
             y=y,
             visible=visible
         )
+    
+
+class SpriteSpecificMonitor(Monitor):
+    def __call__(self,builder: ScratchFileBuilder,*args,**kwargs) -> components.Monitor:
+        monitor = super().__call__(builder,*args,**kwargs)
+        if not builder.current_target.isStage:
+            monitor.spriteName = builder.current_target.name
+        return monitor

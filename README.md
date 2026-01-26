@@ -31,4 +31,4 @@ sprite Cat {
 
 ## Limitations
 
-ArchiCat does support all blocks included by default in Scratch, but does not support extensions yet. All other mayor features of Scratch are supported.
+ArchiCat does support all blocks included by default in Scratch, but does not support extensions yet. All other major features of Scratch are supported.

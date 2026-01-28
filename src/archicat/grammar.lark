@@ -1,4 +1,4 @@
-start: expand? (_NL+ stage_declaration)* _NL*
+start: expand? (_NL* stage_declaration)* _NL*
 
 ?declaration: variable
     | list
@@ -86,6 +86,6 @@ _NL: NEWLINE
 %import common.ESCAPED_STRING -> STRING
 %import common.NEWLINE
 %import common.CNAME -> NAME
-%import common.WS -> WS
+%import common.WS_NEWLINE -> WS
 
 %ignore WS

@@ -3,7 +3,7 @@ from ..extension import Extension
 
 
 class VariableMonitor(Monitor):
-    def __call__(self,builder: ScratchFileBuilder,variable: str,mode: str = 'default',
+    def __call__(self,builder: 'ScratchFileBuilder',variable: str,mode: str = 'default',
                  sliderMin: int = 0,sliderMax: int = 100,isDiscrete: bool = True,**kwargs) -> components.Monitor:
         monitor = super().__call__(builder,**kwargs)
         monitor.id = builder._get_variable(variable)
@@ -17,7 +17,7 @@ class VariableMonitor(Monitor):
         return monitor
     
 class ListMonitor(Monitor):
-    def __call__(self,builder: ScratchFileBuilder,list: str,width: int = 100,height: int = 200,**kwargs) -> components.ListMonitor:
+    def __call__(self,builder: 'ScratchFileBuilder',list: str,width: int = 100,height: int = 200,**kwargs) -> components.ListMonitor:
         monitor = super().__call__(builder,**kwargs)
         monitor.id = builder._get_list(list)
         monitor.params = {'LIST': list}

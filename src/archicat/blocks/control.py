@@ -13,7 +13,7 @@ class CreateCloneOfOptions(Enum):
     MYSELF = '_myself_'
 
 class StopBlock(Block):
-    def __call__(self,builder: ScratchFileBuilder,*args: InputItem | StopOptions,id: Optional[components.Id] = None) -> components.Id:
+    def __call__(self,builder: 'ScratchFileBuilder',*args: InputItem | StopOptions,id: Optional[components.Id] = None) -> components.Id:
         id = super().__call__(builder,*args,id=id)
         block = builder._block_by_id(id)
         if StopOptions(block.fields['STOP_OPTION'].value) == StopOptions.OTHER_SCRIPTS:

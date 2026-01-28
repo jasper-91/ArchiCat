@@ -47,7 +47,7 @@ class CurrentOptions(Enum):
 
 
 class CurrentMonitor(Monitor):
-    def __call__(self,builder: ScratchFileBuilder,option: str | CurrentOptions,**kwargs) -> components.ListMonitor:
+    def __call__(self,builder: 'ScratchFileBuilder',option: str | CurrentOptions,**kwargs) -> components.ListMonitor:
         monitor = super().__call__(builder,**kwargs)
         option = CurrentOptions(option)
         monitor.params = {'CURRENTMENU': option}

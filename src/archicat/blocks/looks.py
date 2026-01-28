@@ -31,7 +31,7 @@ class NumberNameOptions(Enum):
 
 
 class BackdropNumberNameMonitor(Monitor):
-    def __call__(self,builder: ScratchFileBuilder,option: str | NumberNameOptions,**kwargs) -> components.ListMonitor:
+    def __call__(self,builder: 'ScratchFileBuilder',option: str | NumberNameOptions,**kwargs) -> components.ListMonitor:
         monitor = super().__call__(builder,**kwargs)
         option = NumberNameOptions(option)
         monitor.id = monitor.id + '_' + option.value

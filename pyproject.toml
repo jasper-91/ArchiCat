@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ArchiCat"
-version = "0.0.5"
+version = "0.0.7"
 authors = [
   { name="jasper-91" },
 ]
@@ -18,7 +18,7 @@ classifiers = [
 license = "MIT"
 license-files = ["LICEN[CS]E*"]
 dependencies = [
-    "lark",
+    "lark==1.3.1",
     "pydantic>=2.0.0",
     "mutagen"
 ]

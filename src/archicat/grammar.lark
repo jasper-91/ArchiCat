@@ -1,4 +1,4 @@
-start: (expand _NL+)? ((stage_declaration _NL)* stage_declaration _NL*)?
+start: expand? (_NL+ stage_declaration)* _NL*
 
 ?declaration: variable
     | list
@@ -89,4 +89,3 @@ _NL: NEWLINE
 %import common.WS -> WS
 
 %ignore WS
-%ignore NEWLINE

@@ -19,29 +19,29 @@ type Value = str | float | int
 
 type InputItem = components.Id | Value | None
 
-type FieldOrInput = Callable[[ScratchFileBuilder,InputItem],components.Input | components.Field]
+type FieldOrInput = Callable[['ScratchFileBuilder',InputItem],components.Input | components.Field]
 
 
-def field(builder: ScratchFileBuilder,value: str,id: Optional[components.Id] = None) -> components.Field:
+def field(builder: 'ScratchFileBuilder',value: str,id: Optional[components.Id] = None) -> components.Field:
     return components.Field(value,id)
 
-def variable_field(builder: ScratchFileBuilder,name: str) -> components.Field:
+def variable_field(builder: 'ScratchFileBuilder',name: str) -> components.Field:
     return field(builder,name,builder._get_variable(name))
 
-def list_field(builder: ScratchFileBuilder,name: str) -> components.Field:
+def list_field(builder: 'ScratchFileBuilder',name: str) -> components.Field:
     return field(builder,name,builder._get_list(name))
 
-def message_field(builder: ScratchFileBuilder,name: str) -> components.Field:
+def message_field(builder: 'ScratchFileBuilder',name: str) -> components.Field:
     return field(builder,name,builder._get_message(name))
 
-def costume_field(builder: ScratchFileBuilder,name: str) -> components.Field:
+def costume_field(builder: 'ScratchFileBuilder',name: str) -> components.Field:
     return field(builder,name)
 
-def sound_field(builder: ScratchFileBuilder,name: str) -> components.Field:
+def sound_field(builder: 'ScratchFileBuilder',name: str) -> components.Field:
     return field(builder,name)
 
 def option_field(options: Optional[Type[EnumType]] = None) -> FieldOrInput:
-    def _option_field(builder: ScratchFileBuilder,value: str | Enum) -> components.Field:
+    def _option_field(builder: 'ScratchFileBuilder',value: str | Enum) -> components.Field:
         if isinstance(value,options):
             return field(builder,value.value)
         elif isinstance(value,str) and (options is None or _enum_has_value(options,value)):
@@ -49,7 +49,7 @@ def option_field(options: Optional[Type[EnumType]] = None) -> FieldOrInput:
     return _option_field
 
 
-def input(builder: ScratchFileBuilder,type: components.InputType | int,
+def input(builder: 'ScratchFileBuilder',type: components.InputType | int,
           value: InputItem,shadow: Optional[InputItem] = None) -> components.Input:
     if isinstance(value,components.Id):
         if isinstance(block := builder._block_by_id(value),components.Block):
@@ -61,10 +61,10 @@ def input(builder: ScratchFileBuilder,type: components.InputType | int,
         builder._block_by_id(value).shadow = True
     return components.Input(type,value,shadow)
 
-def bool_input(builder: ScratchFileBuilder,value: components.Id) -> components.Input:
+def bool_input(builder: 'ScratchFileBuilder',value: components.Id) -> components.Input:
     return input(builder,components.InputType.NO_SHADOW,value)
 
-def _value_input(builder: ScratchFileBuilder,type: components.InputType,value: Any) -> components.Input:
+def _value_input(builder: 'ScratchFileBuilder',type: components.InputType,value: Any) -> components.Input:
     if isinstance(value,components.Id):
         return input(builder,components.InputType.OBSCURED_SHADOW,value,
                      components.Value(type,''))
@@ -72,31 +72,31 @@ def _value_input(builder: ScratchFileBuilder,type: components.InputType,value: A
         return input(builder,components.InputType.SHADOW,
                      components.Value(type,value))
     
-def int_input(builder: ScratchFileBuilder,value: int | components.Id) -> components.Input:
+def int_input(builder: 'ScratchFileBuilder',value: int | components.Id) -> components.Input:
     return _value_input(builder,components.ValueType.INT,value)
 
-def float_input(builder: ScratchFileBuilder,value: float | components.Id) -> components.Input:
+def float_input(builder: 'ScratchFileBuilder',value: float | components.Id) -> components.Input:
     return _value_input(builder,components.ValueType.FLOAT,value)
 
-def unsigned_int_input(builder: ScratchFileBuilder,value: int | components.Id) -> components.Input:
+def unsigned_int_input(builder: 'ScratchFileBuilder',value: int | components.Id) -> components.Input:
     return _value_input(builder,components.ValueType.UNSIGNED_INT,value)
 
-def unsigned_float_input(builder: ScratchFileBuilder,value: float | components.Id) -> components.Input:
+def unsigned_float_input(builder: 'ScratchFileBuilder',value: float | components.Id) -> components.Input:
     return _value_input(builder,components.ValueType.UNSIGNED_FLOAT,value)
 
-def angle_input(builder: ScratchFileBuilder,value: float | components.Id) -> components.Input:
+def angle_input(builder: 'ScratchFileBuilder',value: float | components.Id) -> components.Input:
     return _value_input(builder,components.ValueType.ANGLE,value)
 
-def color_input(builder: ScratchFileBuilder,value: str | components.Id) -> components.Input:
+def color_input(builder: 'ScratchFileBuilder',value: str | components.Id) -> components.Input:
     return _value_input(builder,components.ValueType.COLOR,value)
 
-def string_input(builder: ScratchFileBuilder,value: str | components.Id) -> components.Input:
+def string_input(builder: 'ScratchFileBuilder',value: str | components.Id) -> components.Input:
     return _value_input(builder,components.ValueType.STRING,value)
 
-def chain_input(builder: ScratchFileBuilder,value: components.Id) -> components.Input:
+def chain_input(builder: 'ScratchFileBuilder',value: components.Id) -> components.Input:
     return input(builder,components.InputType.NO_SHADOW,value)
 
-def costume_input(builder: ScratchFileBuilder,value: components.Id | str) -> components.Input:
+def costume_input(builder: 'ScratchFileBuilder',value: components.Id | str) -> components.Input:
     input_block = Block('looks_costume',COSTUME=field)
     if isinstance(value,components.Id):
         return input(builder,components.InputType.OBSCURED_SHADOW,value,
@@ -104,7 +104,7 @@ def costume_input(builder: ScratchFileBuilder,value: components.Id | str) -> com
     else:
         return input(builder,components.InputType.SHADOW,input_block(builder,value))
     
-def sound_input(builder: ScratchFileBuilder,value: components.Id | str) -> components.Input:
+def sound_input(builder: 'ScratchFileBuilder',value: components.Id | str) -> components.Input:
     input_block = Block('sound_sounds_menu',SOUNDS_MENU=field)
     if isinstance(value,components.Id):
         return input(builder,components.InputType.OBSCURED_SHADOW,value,
@@ -112,8 +112,8 @@ def sound_input(builder: ScratchFileBuilder,value: components.Id | str) -> compo
     else:
         return input(builder,components.InputType.SHADOW,input_block(builder,value))
 
-def option_input(options: Type[EnumType],shadow: str | Enum,input_block: Block) -> FieldOrInput:
-    def _option_input(builder: ScratchFileBuilder,value: components.Id | str | Enum) -> components.Input:
+def option_input(options: Type[EnumType],shadow: str | Enum,input_block: 'Block') -> FieldOrInput:
+    def _option_input(builder: 'ScratchFileBuilder',value: components.Id | str | Enum) -> components.Input:
         if isinstance(value,components.Id):
             return input(builder,components.InputType.OBSCURED_SHADOW,value,input_block(builder,shadow))
         elif isinstance(value,(options,value)):
@@ -122,7 +122,7 @@ def option_input(options: Type[EnumType],shadow: str | Enum,input_block: Block) 
             return input(builder,components.InputType.SHADOW,input_block(value))
     return _option_input
 
-def message_input(builder: ScratchFileBuilder,message: components.Id | str) -> components.Input:
+def message_input(builder: 'ScratchFileBuilder',message: components.Id | str) -> components.Input:
     if isinstance(message,components.Id):
         id,name = builder.stage.broadcasts.items()[0]
         return input(builder,components.InputType.OBSCURED_SHADOW,
@@ -151,7 +151,7 @@ class Block:
             self.attached_options[list(map(lambda arg: arg[0],self.args)).index(name)] = options
         return self
     
-    def apply_args(self,builder: ScratchFileBuilder,*args: InputItem) -> components.Block:
+    def apply_args(self,builder: 'ScratchFileBuilder',*args: InputItem) -> components.Block:
         inputs = {}
         fields = {}
         for arg,(name,func) in zip(args,self.args):
@@ -166,7 +166,7 @@ class Block:
             block = components.MutationBlock(self.opcode,inputs=inputs,fields=fields,mutation=self.mutation)
         return block
 
-    def __call__(self,builder: ScratchFileBuilder,*args: InputItem,id: Optional[components.Id] = None) -> components.Id:        
+    def __call__(self,builder: 'ScratchFileBuilder',*args: InputItem,id: Optional[components.Id] = None) -> components.Id:        
         return builder._register_block(self.apply_args(builder,*args),id)
 
 
@@ -182,7 +182,7 @@ class Monitor:
         self.attached_options = options
         return self
 
-    def __call__(self,builder: ScratchFileBuilder,x: int = 0,y: int = 0,visible: bool = True) -> components.Monitor:
+    def __call__(self,builder: 'ScratchFileBuilder',x: int = 0,y: int = 0,visible: bool = True) -> components.Monitor:
         return components.ListMonitor(
             self.opcode.split('_',1)[-1],
             self.opcode,
@@ -193,7 +193,7 @@ class Monitor:
     
 
 class SpriteSpecificMonitor(Monitor):
-    def __call__(self,builder: ScratchFileBuilder,*args,**kwargs) -> components.Monitor:
+    def __call__(self,builder: 'ScratchFileBuilder',*args,**kwargs) -> components.Monitor:
         monitor = super().__call__(builder,*args,**kwargs)
         if not builder.current_target.isStage:
             monitor.spriteName = builder.current_target.name

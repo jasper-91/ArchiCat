@@ -14,3 +14,4 @@ def transpile_file(source: Path | str,target: Path | str):
     with open(str(source)) as file:
         transpile(file.read(),target)
 
+# TODO replace types with strings for all TYPE_CHECKING imports

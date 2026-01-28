@@ -88,9 +88,9 @@ class Extension:
 class ExtensionManager:
     src: str
     extensions: list[Extension]
-    builder: ScratchFileBuilder
+    builder: 'ScratchFileBuilder'
 
-    def __init__(self,builder: ScratchFileBuilder,src: str = 'archicat.blocks'):
+    def __init__(self,builder: 'ScratchFileBuilder',src: str = 'archicat.blocks'):
         self.src = src
         self.builder = builder
         self.extensions = []

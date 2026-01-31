@@ -1,6 +1,7 @@
 from archicat import components
 from .block import Block,bool_input,string_input
 from .extension import ExtensionManager,Extension
+from .parser import parse
 
 from lark import Tree
 from lark.visitors import Interpreter,v_args
@@ -42,8 +43,9 @@ class ScratchFileBuilder(Interpreter):
     identifier_type_stack: list[IdentifierType]
     available_options_stack: list[Type[Enum]]
     secondary_callbacks: list[tuple[Callable,components.Target,Extension]]
+    source_path: Optional[Path]
 
-    def __init__(self):
+    def __init__(self,source_path: Optional[Path]):
         self.assets = []
         self.stage = components.Stage('Stage',True)
         self.current_target = self.stage
@@ -55,6 +57,7 @@ class ScratchFileBuilder(Interpreter):
         self.secondary_callbacks = []
         self.expands_file = None
         self.project = components.Project(targets=[self.stage])
+        self.source_path = source_path
 
     def save(self,path: Path | str):
         for callback,self.current_target,self.block_stack in self.secondary_callbacks:
@@ -181,6 +184,8 @@ class ScratchFileBuilder(Interpreter):
 
     def expand(self,file):
         self.expands_file = Path(file[1:-1])
+        if self.source_path is not None:
+            self.expands_file = self.source_path.joinpath(self.expands_file)
         with ZipFile(str(self.expands_file)) as zipfile:
             self.project = components.from_json(load_json(zipfile.read('project.json')))
             self.stage = next(target for target in self.project.targets if target.isStage)
@@ -220,23 +225,29 @@ class ScratchFileBuilder(Interpreter):
     def message(self,name):
         self.stage.broadcasts[random_id()] = name.value
 
-    def costume(self,name,path):
+    def costume(self,name,path,*options):
         path = Path(path[1:-1])
+        if self.source_path is not None:
+            path = self.source_path.joinpath(path)
         hash = md5(path.read_bytes()).hexdigest()
         suffix = path.suffix.lstrip('.').lower()
+        options = dict(map(self.visit,options))
         self.current_target.costumes.append(components.Costume(
             assetId=hash,
             name=name,
             md5ext=hash + '.' + suffix,
             dataFormat=suffix,
-            bitmapResolution=1,
-            rotationCenterX=0,
-            rotationCenterY=0
+            bitmapResolution=options.get('bitmapResolution',1),
+            rotationCenterX=options.get('rotationCenterX',0),
+            rotationCenterY=options.get('rotationCenterY',0)
         ))
         self.assets.append((hash + '.' + suffix,path))
 
     def sound(self,name,path):
         path = Path(path[1:-1])
+        path = Path(path[1:-1])
+        if self.source_path is not None:
+            path = self.source_path.joinpath(path)
         hash = md5(path.read_bytes()).hexdigest()
         suffix = path.suffix.lstrip('.').lower()
         if path.suffix.lstrip('.').lower() == 'wav':
@@ -339,3 +350,13 @@ def transform(tree: Tree) -> components.Project:
     builder = ScratchFileBuilder()
     builder.visit(tree)
     return builder
+
+def transpile(source: str,target: Path | str,source_dir: Optional[dict | str] = None):
+    target = str(target)
+    builder = ScratchFileBuilder(Path(source_dir))
+    builder.visit(parse(source))
+    builder.save(target)
+
+def transpile_file(source: Path | str,target: Path | str):
+    with open(str(source)) as file:
+        transpile(file.read(),target,Path(source).parent)

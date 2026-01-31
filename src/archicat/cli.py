@@ -1,4 +1,4 @@
-from . import transpile_file
+from .transformer import transpile_file
 
 from argparse import ArgumentParser
 from pathlib import Path

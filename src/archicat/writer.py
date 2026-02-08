@@ -111,6 +111,18 @@ class Target(Writer):
     def add_comment(self,content: str,**options: Value):
         self.comments.append((content,options))
 
+    def has_procedure(self,name: str) -> bool:
+        return any(name == procedure[0] for procedure in self.procedures)
+    
+    def has_variable(self,name: str) -> bool:
+        return any(name == variable[0] for variable in self.variables)
+    
+    def has_list(self,name: str) -> bool:
+        return any(name == list[0] for list in self.lists)
+    
+    def has_message(self,name: str) -> bool:
+        return any(name == message[0] for message in self.messages)
+
     def generate_code(self,indent: int = 0):
         code = ''
         for name,value in self.variables:

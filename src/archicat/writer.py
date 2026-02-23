@@ -38,7 +38,7 @@ class Block(Writer):
         return self
 
     def generate_code(self,indent: int = 0):
-        return f'{self.opcode}({','.join(map(lambda arg: to_code(arg,indent),self.args))})' + \
+        return f'"{self.opcode}"({','.join(map(lambda arg: to_code(arg,indent),self.args))})' + \
             ('' if self.comment is None else _comment_to_code(self.comment,indent))
     
 class Chain(list[Block],Writer):

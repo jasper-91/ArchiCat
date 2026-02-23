@@ -221,16 +221,16 @@ class ScratchFileBuilder(Interpreter):
     def variable(self,name,value=None):
         name = self.visit(name)
         self.current_target.variables[random_id()] = \
-            components.Variable(name.value,self.visit(value) if value is not None else '')
+            components.Variable(name,self.visit(value) if value is not None else '')
 
     def list(self,name,*values):
         name = self.visit(name)
         self.current_target.lists[random_id()] = \
-            components.List(name.value,list(map(self.visit,values)))
+            components.List(name,list(map(self.visit,values)))
         
     def message(self,name):
         name = self.visit(name)
-        self.stage.broadcasts[random_id()] = name.value
+        self.stage.broadcasts[random_id()] = name
 
     def costume(self,name,path,*options):
         name = self.visit(name)

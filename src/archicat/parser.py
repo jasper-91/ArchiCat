@@ -6,7 +6,9 @@ from pathlib import Path
 from importlib.resources import files
 
 
-grammar = files('archicat').joinpath('grammar.lark').read_text()
+# grammar = files('archicat').joinpath('grammar.lark').read_text()
+with open(Path(__file__).parent / 'grammar.lark') as file:
+    grammar = file.read()
 parser = Lark(grammar)
 
 def parse(text: str) -> Tree:

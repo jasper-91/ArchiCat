@@ -3,7 +3,7 @@ from .block import Block,bool_input,string_input
 from .extension import ExtensionManager,Extension
 from .parser import parse
 
-from lark import Tree
+from lark import Tree,Token
 from lark.visitors import Interpreter,v_args
 from zipfile import ZipFile
 from pathlib import Path
@@ -171,6 +171,7 @@ class ScratchFileBuilder(Interpreter):
         return self.project
 
     def sprite(self,name,*declarations):
+        name = self.visit(name)
         self.block_stack.append(self.block_stack[-1].update('custom',Extension('custom')))
         if targets := list(target for target in self.project.targets if target.name == name):
             self.current_target = targets[0]
@@ -192,6 +193,7 @@ class ScratchFileBuilder(Interpreter):
             self.current_target = self.stage
 
     def config_option(self,name,value):
+        name = self.visit(name)
         setattr(self.current_target,name,self.visit(value))
 
     def config(self,*options):
@@ -199,9 +201,11 @@ class ScratchFileBuilder(Interpreter):
             self.visit(option)
 
     def monitor_option(self,name,value):
+        name = self.visit(name)
         return name,self.visit(value)
     
     def monitor(self,name,arg,*options):
+        name = self.visit(name)
         monitor = self.block_stack[-1].get_monitor(name)
         self.available_options_stack.append(monitor.attached_options)
         if arg is None:
@@ -215,17 +219,21 @@ class ScratchFileBuilder(Interpreter):
         return id
 
     def variable(self,name,value=None):
+        name = self.visit(name)
         self.current_target.variables[random_id()] = \
             components.Variable(name.value,self.visit(value) if value is not None else '')
 
     def list(self,name,*values):
+        name = self.visit(name)
         self.current_target.lists[random_id()] = \
             components.List(name.value,list(map(self.visit,values)))
         
     def message(self,name):
+        name = self.visit(name)
         self.stage.broadcasts[random_id()] = name.value
 
     def costume(self,name,path,*options):
+        name = self.visit(name)
         path = Path(path[1:-1])
         if self.source_path is not None:
             path = self.source_path.joinpath(path)
@@ -244,6 +252,7 @@ class ScratchFileBuilder(Interpreter):
         self.assets.append((hash + '.' + suffix,path))
 
     def sound(self,name,path):
+        name = self.visit(name)
         path = Path(path[1:-1])
         path = Path(path[1:-1])
         if self.source_path is not None:
@@ -270,11 +279,12 @@ class ScratchFileBuilder(Interpreter):
         self.assets.append((hash + '.' + suffix,path))
 
     def option(self,name):
+        name = self.visit(name)
         if self.available_options_stack[-1] is not None:
             return self.available_options_stack[-1]._member_map_[name]
         raise NameError(f'Option {name} not found')
         
-    def identifier(self,name): return name
+    def identifier(self,name): return self.visit(name)
 
     def event(self,hat,position,chain):
         @self._secondary_decorator
@@ -291,17 +301,21 @@ class ScratchFileBuilder(Interpreter):
                 self._block_by_id(chain).parent = hat
 
     def procedure(self,name,*args):
+        name = self.visit(name)
         *args,position,chain = args
         self._create_procedure(name,chain,position,*args,warp=False)
 
     def warp_procedure(self,name,*args):
+        name = self.visit(name)
         *args,position,chain = args
         self._create_procedure(name,chain,position,*args,warp=True)
 
     def string_argument(self,name):
+        name = self.visit(name)
         return name,ArgumentType.STRING
     
     def bool_argument(self,name):
+        name = self.visit(name)
         return name,ArgumentType.BOOL
     
     def position(self,x=0,y=0):
@@ -316,14 +330,17 @@ class ScratchFileBuilder(Interpreter):
             return blocks[0]
 
     def statement_block(self,name,*args):
+        name = self.visit(name)
         *args,comment = args
         return self._transform_block(self.block_stack[-1].get_statement(name),comment,*args)
     
     def reporter_block(self,name,*args):
+        name = self.visit(name)
         *args,comment = args
         return self._transform_block(self.block_stack[-1].get_reporter(name),comment,*args)
     
     def hat_block(self,name,*args):
+        name = self.visit(name)
         *args,comment = args
         return self._transform_block(self.block_stack[-1].get_hat(name),comment,*args)
 
@@ -344,6 +361,12 @@ class ScratchFileBuilder(Interpreter):
     
     def false(self):
         return False
+    
+    def name(self,data: Tree):
+        if data.type == 'STRING':
+            return data[1:-1]
+        else:
+            return data
 
 
 def transform(tree: Tree) -> components.Project:

@@ -15,34 +15,34 @@ start: expand? (_NL* stage_declaration)* _NL*
     | sprite
     | message
 
-sprite: "sprite" NAME _NL* "{" _NL* ((declaration _NL+)* declaration _NL*)? "}"
+sprite: "sprite" name _NL* "{" _NL* ((declaration _NL+)* declaration _NL*)? "}"
 
 expand: "expand" PATH
 
-variable: "var" NAME ["=" value]
+variable: "var" name ["=" value]
 
-list: "list" NAME ("=" "[" _NL* ((value "," _NL*)* value)? _NL*"]")?
+list: "list" name ("=" "[" _NL* ((value "," _NL*)* value)? _NL*"]")?
 
-message: "message" NAME
+message: "message" name
 
-costume: "costume" NAME "=" PATH ("{" _NL* (monitor_option _NL+)* monitor_option _NL* "}")?
+costume: "costume" name "=" PATH ("{" _NL* (monitor_option _NL+)* monitor_option _NL* "}")?
 
-sound: "sound" NAME "=" PATH
+sound: "sound" name "=" PATH
 
-config_option: NAME "=" config_value
+config_option: name "=" config_value
 
 config: "default" (config_option | "{" _NL* ((config_option _NL+)* config_option)? _NL* "}")
 
-?monitor: "monitor" NAME ["(" [option | identifier] ")"] _NL* "{" _NL* ((monitor_option _NL+)* monitor_option)? _NL* "}"
+?monitor: "monitor" name ["(" [option | identifier] ")"] _NL* "{" _NL* ((monitor_option _NL+)* monitor_option)? _NL* "}"
 
-monitor_option: NAME "=" config_value
+monitor_option: name "=" config_value
 
-?argument: NAME "?" -> bool_argument
-    | NAME -> string_argument
+?argument: name "?" -> bool_argument
+    | name -> string_argument
 
-procedure: "proc" NAME ("(" ((argument ",")* argument)? ")")? position chain
+procedure: "proc" name ("(" ((argument ",")* argument)? ")")? position chain
 
-warp_procedure: "proc"? "warp" NAME ("(" ((argument ",")* argument)? ")")? position chain
+warp_procedure: "proc"? "warp" name ("(" ((argument ",")* argument)? ")")? position chain
 
 event: "on"? hat_block position chain
 
@@ -58,15 +58,15 @@ comment: ":" STRING ("{" _NL* ((monitor_option _NL+)* monitor_option)? _NL* "}")
 
 chain: "{" _NL* ((statement_block _NL+)* statement_block)? _NL* "}"
 
-reporter_block: NAME "(" _NL* ((expression "," _NL*)* expression)? _NL* ")" [comment]
+reporter_block: name "(" _NL* ((expression "," _NL*)* expression)? _NL* ")" [comment]
 
-statement_block: NAME "(" _NL* ((expression "," _NL*)* expression)? _NL* ")" [comment]
+statement_block: name "(" _NL* ((expression "," _NL*)* expression)? _NL* ")" [comment]
 
-hat_block: NAME ( "(" _NL* ((expression "," _NL*)* expression)? _NL* ")" )? [comment]
+hat_block: name ( "(" _NL* ((expression "," _NL*)* expression)? _NL* ")" )? [comment]
 
-identifier: NAME
+identifier: name
 
-option: "$" NAME
+option: "$" name
 
 ?value: INT -> int
     | FLOAT -> float
@@ -78,6 +78,8 @@ option: "$" NAME
     | "false" -> false
 
 PATH: STRING
+
+name: NAME | STRING
 
 _NL: NEWLINE
 

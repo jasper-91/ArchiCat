@@ -128,36 +128,36 @@ class Target(Writer):
         for name,value in self.variables:
             code += '\t' * indent
             if value is None:
-                code += f'var {name}\n'
+                code += f'var "{name}"\n'
             else:
-                code += f'var {name} = {to_code(value)}\n'
+                code += f'var "{name}" = {to_code(value)}\n'
         for name,items in self.lists:
             code += '\t' * indent
-            code += f'list {name} = [{','.join(map(to_code,items))}]\n'
+            code += f'list "{name}" = [{','.join(map(to_code,items))}]\n'
         for name in self.messages:
             code += '\t' * indent
-            code += f'message {name}\n'
+            code += f'message "{name}"\n'
         for name,path,options in self.costumes:
             code += '\t' * indent
             if len(options):
-                code += f'costume {name} = "{path}"' + " {\n"
+                code += f'costume "{name}" = "{path}"' + " {\n"
                 for option,value in options.items():
-                    code += '\t' * (indent + 1) + f'{option} = {to_code(value)}\n'
+                    code += '\t' * (indent + 1) + f'"{option}" = {to_code(value)}\n'
                 code += '\t' * indent + '}\n'
             else:
-                code += f'costume {name} = "{path}"\n'
+                code += f'costume "{name}" = "{path}"\n'
         for name,path in self.sounds:
             code += '\t' * indent
-            code += f'sound {name} = {repr(path)}\n'
+            code += f'sound "{name}" = {repr(path)}\n'
         for name,value in self.defaults.items():
             code += '\t' * indent
-            code += f'default {name} = {to_code(value)}\n'
+            code += f'default "{name}" = {to_code(value)}\n'
         for block,options in self.monitors:
             code += '\t' * indent
             code += f'monitor {to_code(block,indent)} ' + '{\n'
             for name,value in options.items():
                 code += '\t' * (indent + 1)
-                code += f'{name} = {to_code(value)}\n'
+                code += f'"{name}" = {to_code(value)}\n'
             code += '\t' * indent + '\n}'
         for block,chain,position in self.events:
             code += '\t' * indent
@@ -167,9 +167,9 @@ class Target(Writer):
             code += '\t' * indent
             position = '' if position is None else f'[{position[0]},{position[1]}]'
             if warp:
-                code += f'warp {name} ({','.join(args)}){position} {chain.generate_code(indent)}\n'
+                code += f'warp "{name}" ({','.join(args)}){position} {chain.generate_code(indent)}\n'
             else:
-                code += f'proc {name} ({','.join(args)}){position} {chain.generate_code(indent)}\n'
+                code += f'proc "{name}" ({','.join(args)}){position} {chain.generate_code(indent)}\n'
         for comment in self.comments:
             code += '\t' * indent
             code += _comment_to_code(comment,indent)
@@ -197,7 +197,7 @@ class Stage(Target):
     
 class Sprite(Target):
     def generate_code(self,indent: int = 1):
-        return f'sprite {self.name} ' + '{\n' + super().generate_code(indent) + '\n}'
+        return f'sprite "{self.name}" ' + '{\n' + super().generate_code(indent) + '\n}'
 
 
 def to_code(object: BlockArgument,indent: int = 0) -> str:

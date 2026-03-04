@@ -166,10 +166,11 @@ class Target(Writer):
         for name,args,warp,position,chain in self.procedures:
             code += '\t' * indent
             position = '' if position is None else f'[{position[0]},{position[1]}]'
+            args = ','.join(tuple(f'"{arg[:-1]}"?' if arg[-1] == '?' else f'"{arg}"' for arg in args))
             if warp:
-                code += f'warp "{name}" ({','.join(args)}){position} {chain.generate_code(indent)}\n'
+                code += f'warp "{name}" ({args}){position} {chain.generate_code(indent)}\n'
             else:
-                code += f'proc "{name}" ({','.join(args)}){position} {chain.generate_code(indent)}\n'
+                code += f'proc "{name}" ({args}){position} {chain.generate_code(indent)}\n'
         for comment in self.comments:
             code += '\t' * indent
             code += _comment_to_code(comment,indent)
